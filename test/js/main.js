@@ -8,12 +8,11 @@ window.onload = function () {
           , "header1"
           , "header2"
           , "quote"
-          , "customHtml"
+          , "oembedPlugin"
         ]
       , extensions: {
-            "customHtml": new CustomHtml({
-                buttonText: "<hr>"
-              , htmlToInsert: "<hr class='someclass'>"
+            "oembedPlugin": new MediumEditorOembedPlugin({
+                oembedProxy: 'http://medium.iframe.ly/api/oembed?iframe=1'
             })
         }
     });

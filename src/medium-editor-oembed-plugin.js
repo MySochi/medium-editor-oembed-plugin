@@ -1,18 +1,4 @@
-/**
- * CustomHtml
- * Creates a new instance of CustomHtml extension.
- *
- * Licensed under the MIT license.
- * Copyright (c) 2014 jillix
- *
- * @name CustomHtml
- * @function
- * @param {Object} options An object containing the extension configuration. The
- * following fields should be provided:
- *  - buttonText: the text of the button (default: `</>`)
- *  - htmlToInsert: the HTML code that should be inserted
- */
-function CustomHtml (options) {
+function MediumEditorOembedPlugin (options) {
     this.button = document.createElement('button');
     this.button.className = 'medium-editor-action';
     if (this.button.innerText) {
@@ -22,6 +8,7 @@ function CustomHtml (options) {
     }
     this.button.onclick = this.onClick.bind(this);
     this.options = options;
+
     this.insertHtmlAtCaret = function (html) {
         var sel, range;
         if (window.getSelection) {
@@ -55,7 +42,29 @@ function CustomHtml (options) {
             // IE < 9
             document.selection.createRange().pasteHTML(html);
         }
-    }
+    };
+
+    this.getOEmbedHTML = function(url, cb) {
+        $.ajax({
+            url: options.oembedProxy,
+            dataType: "json",
+            data: {
+                url: url
+            },
+            success: function(data, textStatus, jqXHR) {
+                cb(null, data, jqXHR);
+            },
+            error: function(jqXHR, textStatus, errorThrown) {
+                var responseJSON = function() {
+                    try {
+                        return JSON.parse(jqXHR.responseText);
+                    } catch(e) {}
+                }();
+
+                cb((responseJSON && responseJSON.error) || jqXHR.status || errorThrown.message, responseJSON, jqXHR);
+            }
+        });
+    };
 }
 
 /**
@@ -65,8 +74,28 @@ function CustomHtml (options) {
  * @name onClick
  * @function
  */
-CustomHtml.prototype.onClick = function() {
-    this.insertHtmlAtCaret(this.options.htmlToInsert);
+MediumEditorOembedPlugin.prototype.onClick = function() {
+    // TODO: get url from selected fragment.
+
+    var url = window.getSelection() + '';
+
+    var that = this;
+
+    this.getOEmbedHTML(url, function(error, oebmed) {
+
+        var html = !error && oebmed && oebmed.html;
+
+        if (oebmed && !oebmed.html && oebmed.type === 'photo' && oebmed.url) {
+            html = '<img src="' + oebmed.url + '" />';
+        }
+
+        if (html) {
+            // Fix for local test.
+            html = html.replace('"//', '"http://');
+
+            that.insertHtmlAtCaret(html);
+        }
+    });
 };
 
 /**
@@ -79,6 +108,6 @@ CustomHtml.prototype.onClick = function() {
  * @return {HTMLButtonElement} The button that is attached in the Medium Editor
  * toolbar
  */
-CustomHtml.prototype.getButton = function() {
+MediumEditorOembedPlugin.prototype.getButton = function() {
     return this.button;
 };
